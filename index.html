@@ -14,7 +14,7 @@
       background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
       background-size: cover;
       background-position: center;
-      background-repeat: no-repeat;
+      background-repeat: repeat;
       overflow-x: hidden;
       opacity: 0;
       transition: opacity 1.2s ease, background-image 0.6s ease;
@@ -351,13 +351,24 @@
   /* Tiles and startup */
   (function () {
     var sites = [
-      {name: "Rivestream", url: "https://rivestream.org"},
-      {name: "StreamingUnity", url: "https://streamingunity.so"},
-      {name: "AnimeUnity", url: "https://animeunity.so"},
-      {name: "YouTube", url: "https://youtube.com"},
-      {name: "IMDn", url: "https://www.imdb.com/"},
-      {name: "StreamIndex", url: "https://streamindex.org"}
-    ];
+  // Originali
+  {name: "Rivestream", url: "https://rivestream.org"},
+  {name: "StreamingUnity", url: "https://streamingunity.so"},
+  {name: "AnimeUnity", url: "https://animeunity.so"},
+  {name: "YouTube", url: "https://youtube.com"},
+  {name: "IMDn", url: "https://www.imdb.com/"},
+  {name: "StreamIndex", url: "https://streamindex.org"},
+
+  // 🇮🇹 Italia
+  {name: "RaiPlay", url: "https://www.raiplay.it"},
+  {name: "Mediaset Infinity", url: "https://mediasetinfinity.mediaset.it"},
+  {name: "La7", url: "https://www.la7.it"},
+  {name: "TV8", url: "https://tv8.it"},
+  {name: "Cielo TV", url: "https://cielotv.it"},
+  {name: "DMAX", url: "https://dmax.it"},
+  {name: "Real Time", url: "https://realtime.it"}
+];
+
 
     function createTiles() {
       var hub = document.getElementById('hub');
