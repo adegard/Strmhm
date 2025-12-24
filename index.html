@@ -8,10 +8,15 @@
       margin: 0;
       color: #fff;
       font-family: Arial, sans-serif;
-      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
       overflow-x: hidden;
+      opacity: 0;
+      transition: opacity 1.5s ease;
     }
 
+    /* Stelle con trasparenza leggera */
     .stars {
       width: 100%;
       height: 100%;
@@ -21,35 +26,56 @@
       left: 0;
       animation: moveStars 200s linear infinite;
       z-index: -1;
+      opacity: 0.25;
+      transition: opacity 2s ease;
     }
     @keyframes moveStars {
       from {background-position: 0 0;}
       to {background-position: 10000px 5000px;}
     }
 
+    /* Orologio in basso a destra con trasparenza */
     #clock {
       position: fixed;
-      top: 20px;
+      bottom: 20px;
       right: 20px;
       font-size: 3em;
       font-family: monospace;
       color: #00ffcc;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(0, 0, 0, 0.35);
       padding: 10px 20px;
       border-radius: 8px;
+      transition: bottom 1.5s ease, right 1.5s ease;
     }
 
+    /* Titolo */
+    h1 {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 2.2em;
+      color: #00ffcc;
+      text-shadow: 0 0 10px #00ffcc;
+      opacity: 0;
+      transition: opacity 2s ease;
+      cursor: pointer;
+    }
+
+    /* Griglia */
     .hub {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      margin-top: 120px;
+      margin-top: 60px;
+      opacity: 0;
+      transition: opacity 1.5s ease;
     }
+
+    /* Tile con trasparenza morbida */
     .tile {
       width: 200px;
       height: 160px;
       margin: 20px;
-      background-color: rgba(255,255,255,0.1);
+      background-color: rgba(255,255,255,0.08);
       border-radius: 10px;
       text-align: center;
       cursor: pointer;
@@ -60,48 +86,32 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      transform: scale(0.7);
+      opacity: 0;
+      backdrop-filter: blur(2px);
     }
+
+    .tile.show {
+      transform: scale(1);
+      opacity: 1;
+      transition: transform 0.4s ease, opacity 0.4s ease;
+    }
+
     .tile:hover {
       transform: scale(1.05);
-      background-color: rgba(0,255,204,0.2);
+      background-color: rgba(0,255,204,0.18);
     }
+
     .tile img {
       width: 64px;
       height: 64px;
       margin-bottom: 10px;
+      opacity: 0.9;
     }
+
     .tile span {
       font-size: 1.2em;
       color: #00ffcc;
-    }
-
-    .weather {
-      text-align: center;
-      margin-top: 50px;
-      padding: 20px;
-      background-color: rgba(0,0,0,0.6);
-      border-top: 2px solid #00ffcc;
-    }
-    .weather h2 {
-      color: #00ffcc;
-      margin-bottom: 20px;
-    }
-    .forecast {
-      display: flex;
-      justify-content: center;
-      gap: 40px;
-    }
-    .day {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #fff;
-      font-size: 1.1em;
-    }
-    .day img {
-      width: 48px;
-      height: 48px;
-      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -109,29 +119,46 @@
 
   <div class="stars"></div>
   <div id="clock"></div>
-  <h1 style="text-align:center;">Benvenuto nel tuo Streaming Hub</h1>
+
+  <h1 id="title">Benvenuto nel tuo Streaming Hub</h1>
+
   <div class="hub" id="hub"></div>
 
-  <!-- Meteo -->
-  <div class="weather">
-    <h2>Previsioni Meteo – Cesate (MI)</h2>
-    <div class="forecast" id="forecast"></div>
-  </div>
-
   <script>
-    // Lista siti
+    /* --- SFONDI DISPONIBILI --- */
+    const backgrounds = [
+      "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1447433819943-74a20887a81e?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=1920&q=60"
+    ];
+
+    /* --- CARICA SFONDO SALVATO --- */
+    let bgIndex = localStorage.getItem("bgIndex") || 0;
+    document.body.style.backgroundImage = "url('" + backgrounds[bgIndex] + "')";
+
+    /* --- CAMBIO SFONDO CON DOPPIO CLICK SUL TITOLO --- */
+    document.getElementById("title").ondblclick = function () {
+      bgIndex = (parseInt(bgIndex) + 1) % backgrounds.length;
+      localStorage.setItem("bgIndex", bgIndex);
+      document.body.style.backgroundImage = "url('" + backgrounds[bgIndex] + "')";
+    };
+
+    /* --- LISTA SITI --- */
     const sites = [
       {name: "Rivestream", url: "https://rivestream.org"},
       {name: "StreamingUnity", url: "https://streamingunity.so"},
       {name: "AnimeUnity", url: "https://animeunity.so"},
       {name: "YouTube", url: "https://youtube.com"},
-      {name: "IMDn", url: "https://www.imdb.com/"},  
+      {name: "IMDn", url: "https://www.imdb.com/"},
       {name: "StreamIndex", url: "https://streamindex.org"}
     ];
 
+    /* --- CREA TILE --- */
     function createTiles() {
       const hub = document.getElementById('hub');
-      sites.forEach(site => {
+      sites.forEach((site, i) => {
         const favicon = site.url.replace(/\/+$/, '') + "/favicon.ico";
         const a = document.createElement('a');
         a.className = "tile";
@@ -140,7 +167,6 @@
 
         const img = document.createElement('img');
         img.src = favicon;
-        img.alt = site.name;
         img.onerror = () => {
           img.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4fa.svg";
         };
@@ -151,55 +177,33 @@
         a.appendChild(img);
         a.appendChild(span);
         hub.appendChild(a);
+
+        /* Ritardo animazione tile */
+        setTimeout(() => a.classList.add("show"), 300 + i * 120);
       });
     }
 
-    // Orologio digitale
+    /* --- OROLOGIO --- */
     function updateClock() {
       const now = new Date();
       const h = String(now.getHours()).padStart(2, '0');
       const m = String(now.getMinutes()).padStart(2, '0');
       const s = String(now.getSeconds()).padStart(2, '0');
-      document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+      document.getElementById('clock').textContent = h + ":" + m + ":" + s;
     }
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Meteo automatico con OpenWeatherMap
-    async function loadWeather() {
-      const apiKey = "4486c1f3d5d5f008857834e3444aeac7"; // <-- sostituisci con la tua API key
-      const url = `https://api.openweathermap.org/data/2.5/forecast?q=Cesate,it&units=metric&appid=${apiKey}&lang=it`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      const forecastDiv = document.getElementById('forecast');
-      forecastDiv.innerHTML = "";
-
-      // Prendi 3 giorni (una previsione ogni 24h ~ ogni 8 step da 3h)
-      for (let i = 0; i < 3; i++) {
-        const item = data.list[i*8]; // ogni 8 step = ~24h
-        const date = new Date(item.dt * 1000);
-        const options = { day: '2-digit', month: 'short' };
-        const dayStr = date.toLocaleDateString('it-IT', options);
-
-        const icon = `https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png`;
-        const desc = item.weather[0].description;
-        const tempMax = Math.round(item.main.temp_max);
-        const tempMin = Math.round(item.main.temp_min);
-
-        const div = document.createElement('div');
-        div.className = "day";
-        div.innerHTML = `
-          <img src="${icon}" alt="${desc}">
-          <span>${dayStr}: ${desc}<br>Max ${tempMax}°C / Min ${tempMin}°C</span>
-        `;
-        forecastDiv.appendChild(div);
-      }
-    }
-
-    createTiles();
-    loadWeather();
+    /* --- ANIMAZIONE DI AVVIO --- */
+    window.onload = function () {
+      document.body.style.opacity = "1";
+      document.querySelector(".stars").style.opacity = "0.25";
+      document.getElementById("title").style.opacity = "1";
+      document.getElementById("hub").style.opacity = "1";
+      createTiles();
+    };
   </script>
 
 </body>
 </html>
+
