@@ -1,22 +1,25 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Streaming Hub</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
+    html,body { height:100%; }
     body {
       margin: 0;
       color: #fff;
       font-family: Arial, sans-serif;
+      /* fallback gradient always visible */
+      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
       overflow-x: hidden;
       opacity: 0;
-      transition: opacity 1.5s ease;
+      transition: opacity 1.2s ease, background-image 0.8s ease;
     }
 
-    /* Stelle */
     .stars {
       width: 100%;
       height: 100%;
@@ -27,14 +30,12 @@
       animation: moveStars 200s linear infinite;
       z-index: -1;
       opacity: 0.25;
-      transition: opacity 2s ease;
     }
     @keyframes moveStars {
-      from {background-position: 0 0;}
-      to {background-position: 10000px 5000px;}
+      from { background-position: 0 0; }
+      to   { background-position: 10000px 5000px; }
     }
 
-    /* Orologio */
     #clock {
       position: fixed;
       bottom: 20px;
@@ -42,13 +43,12 @@
       font-size: 3em;
       font-family: monospace;
       color: #00ffcc;
-      background-color: rgba(0, 0, 0, 0.35);
+      background-color: rgba(0,0,0,0.35);
       padding: 10px 20px;
       border-radius: 8px;
-      transition: bottom 1.5s ease, right 1.5s ease;
+      z-index: 10;
     }
 
-    /* Pulsante cambio sfondo */
     #bgBtn {
       position: fixed;
       bottom: 20px;
@@ -60,13 +60,11 @@
       border-radius: 8px;
       font-size: 1em;
       cursor: pointer;
+      z-index: 10;
       transition: background 0.2s;
     }
-    #bgBtn:hover {
-      background: rgba(0,255,204,0.25);
-    }
+    #bgBtn:hover { background: rgba(0,255,204,0.18); }
 
-    /* Titolo */
     h1 {
       text-align: center;
       margin-top: 40px;
@@ -74,20 +72,20 @@
       color: #00ffcc;
       text-shadow: 0 0 10px #00ffcc;
       opacity: 0;
-      transition: opacity 2s ease;
+      transition: opacity 1.2s ease;
+      z-index: 5;
     }
 
-    /* Griglia */
     .hub {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       margin-top: 60px;
       opacity: 0;
-      transition: opacity 1.5s ease;
+      transition: opacity 1.2s ease;
+      z-index: 5;
     }
 
-    /* Tile */
     .tile {
       width: 200px;
       height: 160px;
@@ -130,22 +128,78 @@
       font-size: 1.2em;
       color: #00ffcc;
     }
+
+    /* subtle overlay to keep tiles readable on bright backgrounds */
+    .bg-dim {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.18);
+      pointer-events: none;
+      z-index: 0;
+      transition: background 0.6s ease;
+    }
+
+    /* small responsive tweak */
+    @media (max-width: 600px) {
+      #clock { font-size: 2em; padding: 8px 12px; }
+      .tile { width: 160px; height: 130px; }
+    }
   </style>
 </head>
 <body>
 
   <div class="stars"></div>
-  <div id="clock"></div>
+  <div class="bg-dim" id="bgDim"></div>
 
+  <div id="clock"></div>
   <button id="bgBtn">Sfondo</button>
 
   <h1>Benvenuto nel tuo Streaming Hub</h1>
-
   <div class="hub" id="hub"></div>
 
   <script>
-    /* --- SFONDI DISPONIBILI --- */
-    const backgrounds = [
+  /* -------------------------
+     Clock HH:MM with blinking colon
+     ------------------------- */
+  (function () {
+    function updateClock() {
+      var now = new Date();
+      var h = String(now.getHours()).padStart(2, '0');
+      var m = String(now.getMinutes()).padStart(2, '0');
+      var blink = now.getSeconds() % 2 === 0 ? ":" : " ";
+      document.getElementById('clock').textContent = h + blink + m;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+  })();
+
+  /* -------------------------
+     Theme detection (season / events)
+     ------------------------- */
+  function getThemeTag() {
+    var now = new Date();
+    var month = now.getMonth() + 1;
+    var day = now.getDate();
+
+    if (month === 12 && day >= 20) return "christmas";
+    if (month === 10) return "halloween";
+    if (month === 1 && day <= 7) return "newyear";
+
+    if (month >= 3 && month <= 5) return "spring";
+    if (month >= 6 && month <= 8) return "summer";
+    if (month >= 9 && month <= 11) return "autumn";
+    return "winter";
+  }
+
+  /* -------------------------
+     Multi-source background loader
+     - tries multiple candidate URLs in order
+     - preloads image; on success sets background
+     - fallback: keeps gradient + stars
+     ------------------------- */
+  (function () {
+    // curated reliable image URLs (fallback pool)
+    var localImages = [
       "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?auto=format&fit=crop&w=1920&q=60",
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=60",
       "https://images.unsplash.com/photo-1447433819943-74a20887a81e?auto=format&fit=crop&w=1920&q=60",
@@ -153,19 +207,111 @@
       "https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=1920&q=60"
     ];
 
-    /* --- CARICA SFONDO SALVATO --- */
-    let bgIndex = localStorage.getItem("bgIndex") || 0;
-    document.body.style.backgroundImage = "url('" + backgrounds[bgIndex] + "')";
-
-    /* --- CAMBIO SFONDO CON PULSANTE --- */
-    document.getElementById("bgBtn").onclick = function () {
-      bgIndex = (parseInt(bgIndex) + 1) % backgrounds.length;
-      localStorage.setItem("bgIndex", bgIndex);
-      document.body.style.backgroundImage = "url('" + backgrounds[bgIndex] + "')";
+    // placeimg categories mapping (no keywords, but reliable)
+    var placeimgMap = {
+      spring: "nature",
+      summer: "nature",
+      autumn: "nature",
+      winter: "nature",
+      christmas: "nature",
+      halloween: "arch",
+      newyear: "nature"
     };
 
-    /* --- LISTA SITI --- */
-    const sites = [
+    // Build candidate list for current theme
+    function buildCandidates() {
+      var tag = getThemeTag();
+      var candidates = [];
+
+      // 1) Unsplash random by tag (fast redirect). Some TV browsers block 302; we still try.
+      candidates.push("https://source.unsplash.com/random/1920x1080/?" + encodeURIComponent(tag));
+
+      // 2) PlaceIMG category (no keyword) - reliable simple image service
+      var cat = placeimgMap[tag] || "nature";
+      candidates.push("https://placeimg.com/1920/1080/" + cat + "?random=" + Math.floor(Math.random()*10000));
+
+      // 3) Picsum random (generic) - no tag support but reliable
+      candidates.push("https://picsum.photos/1920/1080?random=" + Math.floor(Math.random()*10000));
+
+      // 4) Local curated Unsplash static images as final fallback
+      // shuffle localImages and append a few
+      var shuffled = localImages.slice();
+      for (var i = shuffled.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+      }
+      for (var k = 0; k < shuffled.length; k++) candidates.push(shuffled[k]);
+
+      return candidates;
+    }
+
+    // attempt to load candidates sequentially until one succeeds
+    function tryLoadCandidates(candidates, index) {
+      if (!candidates || index >= candidates.length) {
+        // nothing worked; keep gradient fallback
+        console.log("All background sources failed; keeping gradient fallback.");
+        return;
+      }
+
+      var url = candidates[index];
+      var img = new Image();
+
+      // add a short timeout in case the request hangs (some TV browsers)
+      var timedOut = false;
+      var to = setTimeout(function () {
+        timedOut = true;
+        img.src = ""; // cancel
+        console.log("Background load timed out for:", url);
+        tryLoadCandidates(candidates, index + 1);
+      }, 7000); // 7s timeout
+
+      img.onload = function () {
+        if (timedOut) return;
+        clearTimeout(to);
+        // set background with a gentle dim overlay to keep tiles readable
+        document.body.style.backgroundImage = "url('" + url + "')";
+        // slightly darken the dim overlay on bright images
+        document.getElementById('bgDim').style.background = "rgba(0,0,0,0.18)";
+      };
+      img.onerror = function () {
+        if (timedOut) return;
+        clearTimeout(to);
+        console.log("Background load failed for:", url);
+        tryLoadCandidates(candidates, index + 1);
+      };
+
+      // start loading
+      img.src = url;
+    }
+
+    // public function to set a random background (tries multiple sources)
+    window.setRandomBackground = function () {
+      var candidates = buildCandidates();
+      // shuffle candidates to avoid always trying same order
+      for (var i = candidates.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = candidates[i]; candidates[i] = candidates[j]; candidates[j] = tmp;
+      }
+      tryLoadCandidates(candidates, 0);
+    };
+
+    // attach to button
+    var btn = document.getElementById('bgBtn');
+    if (btn) btn.addEventListener('click', function () {
+      // visual feedback: dim overlay pulse
+      var dim = document.getElementById('bgDim');
+      dim.style.transition = "background 0.3s ease";
+      dim.style.background = "rgba(0,0,0,0.35)";
+      setTimeout(function () { dim.style.background = "rgba(0,0,0,0.18)"; }, 600);
+      window.setRandomBackground();
+    });
+  })();
+
+  /* -------------------------
+     Tiles and startup animation
+     ------------------------- */
+  (function () {
+    var sites = [
       {name: "Rivestream", url: "https://rivestream.org"},
       {name: "StreamingUnity", url: "https://streamingunity.so"},
       {name: "AnimeUnity", url: "https://animeunity.so"},
@@ -174,53 +320,49 @@
       {name: "StreamIndex", url: "https://streamindex.org"}
     ];
 
-    /* --- CREA TILE --- */
     function createTiles() {
-      const hub = document.getElementById('hub');
-      sites.forEach((site, i) => {
-        const favicon = site.url.replace(/\/+$/, '') + "/favicon.ico";
-        const a = document.createElement('a');
+      var hub = document.getElementById('hub');
+      sites.forEach(function (site, i) {
+        var favicon = site.url.replace(/\/+$/, '') + "/favicon.ico";
+
+        var a = document.createElement('a');
         a.className = "tile";
         a.href = site.url;
         a.target = "_blank";
+        a.rel = "noopener noreferrer";
 
-        const img = document.createElement('img');
+        var img = document.createElement('img');
         img.src = favicon;
-        img.onerror = () => {
+        img.alt = site.name;
+        img.onerror = function () {
           img.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4fa.svg";
         };
 
-        const span = document.createElement('span');
+        var span = document.createElement('span');
         span.textContent = site.name;
 
         a.appendChild(img);
         a.appendChild(span);
         hub.appendChild(a);
 
-        setTimeout(() => a.classList.add("show"), 300 + i * 120);
+        setTimeout(function () { a.classList.add('show'); }, 300 + i * 120);
       });
     }
 
-    /* --- OROLOGIO HH.MM --- */
-    function updateClock() {
-      const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      document.getElementById('clock').textContent = h + "." + m;
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    /* --- ANIMAZIONE DI AVVIO --- */
     window.onload = function () {
       document.body.style.opacity = "1";
-      document.querySelector(".stars").style.opacity = "0.25";
-      document.getElementById("hub").style.opacity = "1";
-      document.querySelector("h1").style.opacity = "1";
-      createTiles();
-    };
-  </script>
+      document.querySelector('.stars').style.opacity = "0.25";
+      document.querySelector('h1').style.opacity = "1";
+      document.getElementById('hub').style.opacity = "1";
 
+      createTiles();
+      // try to set a themed background once on load
+      if (typeof window.setRandomBackground === "function") {
+        window.setRandomBackground();
+      }
+    };
+  })();
+  </script>
 </body>
 </html>
 
