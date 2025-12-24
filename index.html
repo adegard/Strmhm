@@ -167,7 +167,7 @@
 
     // Meteo automatico con OpenWeatherMap
     async function loadWeather() {
-      const apiKey = "4486c1f3d5d5f008857834e3444aeac7"; // <-- sostituisci con la tua API key
+      const apiKey = "API"; // <-- sostituisci con la tua API key
       const url = `https://api.openweathermap.org/data/2.5/forecast?q=Cesate,it&units=metric&appid=${apiKey}&lang=it`;
       const res = await fetch(url);
       const data = await res.json();
