@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -19,11 +20,11 @@
       position: fixed;
       top: 20px;
       right: 20px;
-      font-size: 3.2em;
+      font-size: 2.5em;
       font-family: monospace;
       color: #00ffcc;
       background-color: rgba(0, 0, 0, 0.5);
-      padding: 12px 24px;
+      padding: 10px 20px;
       border-radius: 10px;
       text-shadow: 0 0 10px #00ffcc;
       z-index: 10;
@@ -32,7 +33,7 @@
     /* TITLE */
     h1 {
       text-align: center;
-      font-size: 3.5em;
+      font-size: 2.8em;
       margin-top: 80px;
       color: #00ffcc;
       text-shadow: 0 0 15px #00ffcc;
@@ -48,11 +49,11 @@
     }
 
     .tile {
-      width: 280px;
-      height: 220px;
-      margin: 30px;
+      width: 200px;
+      height: 160px;
+      margin: 20px;
       background-color: rgba(255,255,255,0.08);
-      border-radius: 15px;
+      border-radius: 12px;
       text-align: center;
       cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s;
@@ -62,61 +63,26 @@
       align-items: center;
       justify-content: center;
       outline: none;
-      box-shadow: 0 0 20px rgba(0,255,204,0.25);
+      box-shadow: 0 0 15px rgba(0,255,204,0.25);
     }
 
     .tile:hover,
     .tile:focus {
-      transform: scale(1.08);
-      box-shadow: 0 0 40px rgba(0,255,204,0.6);
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(0,255,204,0.6);
       background-color: rgba(0,255,204,0.15);
     }
 
     .tile img {
-      width: 96px;
-      height: 96px;
-      margin-bottom: 15px;
+      width: 64px;
+      height: 64px;
+      margin-bottom: 10px;
     }
 
     .tile span {
-      font-size: 1.8em;
+      font-size: 1.3em;
       color: #00ffcc;
       text-shadow: 0 0 10px #00ffcc;
-    }
-
-    /* WEATHER */
-    .weather {
-      text-align: center;
-      margin-top: 20px;
-      padding: 30px;
-      background-color: rgba(0,0,0,0.6);
-      border-top: 2px solid #00ffcc;
-    }
-
-    .weather h2 {
-      font-size: 2.4em;
-      color: #00ffcc;
-      margin-bottom: 30px;
-      text-shadow: 0 0 10px #00ffcc;
-    }
-
-    .forecast {
-      display: flex;
-      justify-content: center;
-      gap: 60px;
-    }
-
-    .day {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-size: 1.6em;
-    }
-
-    .day img {
-      width: 80px;
-      height: 80px;
-      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -126,11 +92,6 @@
   <div id="clock"></div>
   <h1>Benvenuto nel tuo Streaming Hub</h1>
   <div class="hub" id="hub"></div>
-
-  <div class="weather">
-    <h2>Previsioni Meteo – Cesate (MI)</h2>
-    <div class="forecast" id="forecast"></div>
-  </div>
 
   <script>
     /* SITES */
@@ -179,38 +140,7 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    /* WEATHER */
-    async function loadWeather() {
-      const apiKey = "4486c1f3d5d5f008857834e3444aeac7";
-      const url = `https://api.openweathermap.org/data/2.5/forecast?q=Cesate,it&units=metric&appid=${apiKey}&lang=it`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      const forecastDiv = document.getElementById('forecast');
-      forecastDiv.innerHTML = "";
-
-      for (let i = 0; i < 3; i++) {
-        const item = data.list[i * 8];
-        const date = new Date(item.dt * 1000);
-        const options = { day: '2-digit', month: 'short' };
-        const dayStr = date.toLocaleDateString('it-IT', options);
-
-        const icon = `https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png`;
-        const desc = item.weather[0].description;
-        const tempMax = Math.round(item.main.temp_max);
-        const tempMin = Math.round(item.main.temp_min);
-
-        const div = document.createElement('div');
-        div.className = "day";
-        div.innerHTML = `
-          <img src="${icon}" alt="${desc}">
-          <span>${dayStr}<br>${desc}<br>Max ${tempMax}°C / Min ${tempMin}°C</span>
-        `;
-        forecastDiv.appendChild(div);
-      }
-    }
-
-    /* TV REMOTE NAVIGATION */
+    /* TV REMOTE NAVIGATION (FIXED) */
     let currentIndex = 0;
 
     function focusTile(index) {
@@ -222,23 +152,31 @@
 
     document.addEventListener('keydown', e => {
       const tiles = document.querySelectorAll('.tile');
-      const cols = Math.floor(window.innerWidth / 340);
+      const cols = Math.floor(window.innerWidth / 240); // FIXED COLUMN CALCULATION
 
-      if (e.key === "ArrowRight") currentIndex = (currentIndex + 1) % tiles.length;
-      if (e.key === "ArrowLeft") currentIndex = (currentIndex - 1 + tiles.length) % tiles.length;
-      if (e.key === "ArrowDown") currentIndex = Math.min(currentIndex + cols, tiles.length - 1);
-      if (e.key === "ArrowUp") currentIndex = Math.max(currentIndex - cols, 0);
-      if (e.key === "Enter") tiles[currentIndex].click();
+      if (e.key === "ArrowRight") {
+        currentIndex = (currentIndex + 1) % tiles.length;
+      }
+      if (e.key === "ArrowLeft") {
+        currentIndex = (currentIndex - 1 + tiles.length) % tiles.length;
+      }
+      if (e.key === "ArrowDown") {
+        currentIndex = Math.min(currentIndex + cols, tiles.length - 1);
+      }
+      if (e.key === "ArrowUp") {
+        currentIndex = Math.max(currentIndex - cols, 0);
+      }
+      if (e.key === "Enter") {
+        tiles[currentIndex].click();
+      }
 
       focusTile(currentIndex);
     });
 
     /* INIT */
     createTiles();
-    loadWeather();
     window.onload = () => focusTile(0);
   </script>
 
 </body>
 </html>
-
