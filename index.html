@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <title>Streaming Hub</title>
+  <meta charset="utf-8" />
+  <title>Streaming Hub - Fix Background</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     html,body { height:100%; }
@@ -10,14 +10,14 @@
       margin: 0;
       color: #fff;
       font-family: Arial, sans-serif;
-      /* fallback gradient always visible */
+      /* fallback gradient sempre visibile */
       background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
       overflow-x: hidden;
       opacity: 0;
-      transition: opacity 1.2s ease, background-image 0.8s ease;
+      transition: opacity 1.2s ease, background-image 0.6s ease;
     }
 
     .stars {
@@ -49,7 +49,7 @@
       z-index: 10;
     }
 
-    #bgBtn {
+    #bgBtn, #nextBtn {
       position: fixed;
       bottom: 20px;
       left: 20px;
@@ -63,7 +63,8 @@
       z-index: 10;
       transition: background 0.2s;
     }
-    #bgBtn:hover { background: rgba(0,255,204,0.18); }
+    #nextBtn { left: 140px; }
+    #bgBtn:hover, #nextBtn:hover { background: rgba(0,255,204,0.18); }
 
     h1 {
       text-align: center;
@@ -129,7 +130,6 @@
       color: #00ffcc;
     }
 
-    /* subtle overlay to keep tiles readable on bright backgrounds */
     .bg-dim {
       position: fixed;
       inset: 0;
@@ -139,10 +139,10 @@
       transition: background 0.6s ease;
     }
 
-    /* small responsive tweak */
     @media (max-width: 600px) {
       #clock { font-size: 2em; padding: 8px 12px; }
       .tile { width: 160px; height: 130px; }
+      #nextBtn { left: 110px; }
     }
   </style>
 </head>
@@ -153,14 +153,13 @@
 
   <div id="clock"></div>
   <button id="bgBtn">Sfondo</button>
+  <button id="nextBtn">Next</button>
 
   <h1>Benvenuto nel tuo Streaming Hub</h1>
   <div class="hub" id="hub"></div>
 
   <script>
-  /* -------------------------
-     Clock HH:MM with blinking colon
-     ------------------------- */
+  /* ---------- Clock HH:MM blinking colon ---------- */
   (function () {
     function updateClock() {
       var now = new Date();
@@ -173,10 +172,8 @@
     updateClock();
   })();
 
-  /* -------------------------
-     Theme detection (season / events)
-     ------------------------- */
-  function getThemeTag() {
+  /* ---------- Theme detection ---------- */
+  function getThemeTagForNow() {
     var now = new Date();
     var month = now.getMonth() + 1;
     var day = now.getDate();
@@ -185,131 +182,173 @@
     if (month === 10) return "halloween";
     if (month === 1 && day <= 7) return "newyear";
 
-    if (month >= 3 && month <= 5) return "spring";
-    if (month >= 6 && month <= 8) return "summer";
-    if (month >= 9 && month <= 11) return "autumn";
-    return "winter";
+    var monthMap = {
+      1: "winter", 2: "winter",
+      3: "spring", 4: "spring", 5: "spring",
+      6: "summer", 7: "summer", 8: "summer",
+      9: "autumn", 10: "autumn", 11: "autumn",
+      12: "winter"
+    };
+    return monthMap[month] || "nature";
   }
 
-  /* -------------------------
-     Multi-source background loader
-     - tries multiple candidate URLs in order
-     - preloads image; on success sets background
-     - fallback: keeps gradient + stars
-     ------------------------- */
-  (function () {
-    // curated reliable image URLs (fallback pool)
-    var localImages = [
+  /* ---------- Image map per theme (static curated URLs) ----------
+     These are reliable static images (Unsplash direct links).
+     You can add more URLs per theme; they will be used first.
+  --------------------------------------------------------------- */
+  var imageMap = {
+    christmas: [
+      "https://images.unsplash.com/photo-1541872703-8b8f0f3f3b6b?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1519744792095-2f2205e87b6f?auto=format&fit=crop&w=1920&q=60"
+    ],
+    halloween: [
+      "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=1920&q=60"
+    ],
+    newyear: [
+      "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=60"
+    ],
+    winter: [
       "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?auto=format&fit=crop&w=1920&q=60",
-      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=60",
-      "https://images.unsplash.com/photo-1447433819943-74a20887a81e?auto=format&fit=crop&w=1920&q=60",
-      "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1920&q=60",
-      "https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=1920&q=60"
-    ];
+      "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1920&q=60"
+    ],
+    spring: [
+      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=60"
+    ],
+    summer: [
+      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=60"
+    ],
+    autumn: [
+      "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1920&q=60",
+      "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=60"
+    ]
+  };
 
-    // placeimg categories mapping (no keywords, but reliable)
-    var placeimgMap = {
-      spring: "nature",
-      summer: "nature",
-      autumn: "nature",
-      winter: "nature",
-      christmas: "nature",
-      halloween: "arch",
-      newyear: "nature"
-    };
+  /* ---------- Helpers: build candidate list (static first, then reliable services) ---------- */
+  function buildCandidates(theme, minCount) {
+    minCount = minCount || 10;
+    var candidates = [];
 
-    // Build candidate list for current theme
-    function buildCandidates() {
-      var tag = getThemeTag();
-      var candidates = [];
-
-      // 1) Unsplash random by tag (fast redirect). Some TV browsers block 302; we still try.
-      candidates.push("https://source.unsplash.com/random/1920x1080/?" + encodeURIComponent(tag));
-
-      // 2) PlaceIMG category (no keyword) - reliable simple image service
-      var cat = placeimgMap[tag] || "nature";
-      candidates.push("https://placeimg.com/1920/1080/" + cat + "?random=" + Math.floor(Math.random()*10000));
-
-      // 3) Picsum random (generic) - no tag support but reliable
-      candidates.push("https://picsum.photos/1920/1080?random=" + Math.floor(Math.random()*10000));
-
-      // 4) Local curated Unsplash static images as final fallback
-      // shuffle localImages and append a few
-      var shuffled = localImages.slice();
-      for (var i = shuffled.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+    // 1) add curated static images for the theme (if any)
+    if (imageMap[theme] && imageMap[theme].length) {
+      for (var i = 0; i < imageMap[theme].length; i++) {
+        candidates.push(imageMap[theme][i]);
       }
-      for (var k = 0; k < shuffled.length; k++) candidates.push(shuffled[k]);
-
-      return candidates;
     }
 
-    // attempt to load candidates sequentially until one succeeds
-    function tryLoadCandidates(candidates, index) {
-      if (!candidates || index >= candidates.length) {
-        // nothing worked; keep gradient fallback
-        console.log("All background sources failed; keeping gradient fallback.");
+    // 2) add picsum and placeimg variants (reliable)
+    while (candidates.length < minCount) {
+      candidates.push("https://picsum.photos/1920/1080?random=" + Math.floor(Math.random() * 100000));
+      if (candidates.length >= minCount) break;
+      candidates.push("https://placeimg.com/1920/1080/nature?rand=" + Math.floor(Math.random() * 100000));
+    }
+
+    // 3) ensure uniqueness
+    var uniq = [];
+    for (var j = 0; j < candidates.length; j++) {
+      if (uniq.indexOf(candidates[j]) === -1) uniq.push(candidates[j]);
+    }
+    return uniq.slice(0, Math.max(minCount, uniq.length));
+  }
+
+  /* ---------- Preload and apply background safely ---------- */
+  var cachedImages = [];
+  var cachedIndex = 0;
+
+  function preloadAndCache(theme, minCount, callback) {
+    var candidates = buildCandidates(theme, minCount * 2); // build extra candidates
+    var loaded = [];
+    var idx = 0;
+
+    function next() {
+      if (loaded.length >= minCount || idx >= candidates.length) {
+        callback(null, loaded.slice(0, minCount));
         return;
       }
-
-      var url = candidates[index];
+      var url = candidates[idx++];
       var img = new Image();
-
-      // add a short timeout in case the request hangs (some TV browsers)
       var timedOut = false;
       var to = setTimeout(function () {
         timedOut = true;
         img.src = ""; // cancel
-        console.log("Background load timed out for:", url);
-        tryLoadCandidates(candidates, index + 1);
-      }, 7000); // 7s timeout
+        console.log("Timeout loading", url);
+        next();
+      }, 7000);
 
       img.onload = function () {
         if (timedOut) return;
         clearTimeout(to);
-        // set background with a gentle dim overlay to keep tiles readable
-        document.body.style.backgroundImage = "url('" + url + "')";
-        // slightly darken the dim overlay on bright images
-        document.getElementById('bgDim').style.background = "rgba(0,0,0,0.18)";
+        loaded.push(url);
+        next();
       };
       img.onerror = function () {
         if (timedOut) return;
         clearTimeout(to);
-        console.log("Background load failed for:", url);
-        tryLoadCandidates(candidates, index + 1);
+        console.log("Error loading", url);
+        next();
       };
-
       // start loading
       img.src = url;
     }
 
-    // public function to set a random background (tries multiple sources)
-    window.setRandomBackground = function () {
-      var candidates = buildCandidates();
-      // shuffle candidates to avoid always trying same order
-      for (var i = candidates.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var tmp = candidates[i]; candidates[i] = candidates[j]; candidates[j] = tmp;
-      }
-      tryLoadCandidates(candidates, 0);
-    };
+    next();
+  }
 
-    // attach to button
-    var btn = document.getElementById('bgBtn');
-    if (btn) btn.addEventListener('click', function () {
-      // visual feedback: dim overlay pulse
-      var dim = document.getElementById('bgDim');
-      dim.style.transition = "background 0.3s ease";
-      dim.style.background = "rgba(0,0,0,0.35)";
-      setTimeout(function () { dim.style.background = "rgba(0,0,0,0.18)"; }, 600);
-      window.setRandomBackground();
+  function setBackgroundFromCache() {
+    if (!cachedImages || cachedImages.length === 0) {
+      // keep gradient fallback
+      console.log("No cached images available; keeping gradient.");
+      return;
+    }
+    var url = cachedImages[cachedIndex % cachedImages.length];
+    document.body.style.backgroundImage = "url('" + url + "')";
+    // ensure dim overlay for readability
+    document.getElementById('bgDim').style.background = "rgba(0,0,0,0.18)";
+  }
+
+  function refreshTheme(minCount) {
+    minCount = minCount || 10;
+    var theme = getThemeTagForNow();
+    // visual feedback
+    var dim = document.getElementById('bgDim');
+    dim.style.transition = "background 0.3s ease";
+    dim.style.background = "rgba(0,0,0,0.35)";
+    setTimeout(function () { dim.style.background = "rgba(0,0,0,0.18)"; }, 600);
+
+    preloadAndCache(theme, minCount, function (err, results) {
+      if (results && results.length > 0) {
+        cachedImages = results;
+        cachedIndex = 0;
+        setBackgroundFromCache();
+        console.log("Cached images:", results.length);
+      } else {
+        console.log("No images preloaded for theme:", theme);
+      }
     });
+  }
+
+  function nextCached() {
+    if (!cachedImages || cachedImages.length === 0) {
+      refreshTheme(10);
+      return;
+    }
+    cachedIndex = (cachedIndex + 1) % cachedImages.length;
+    setBackgroundFromCache();
+  }
+
+  /* Attach buttons */
+  (function () {
+    var btn = document.getElementById('bgBtn');
+    var next = document.getElementById('nextBtn');
+    if (btn) btn.addEventListener('click', function () { refreshTheme(10); });
+    if (next) next.addEventListener('click', function () { nextCached(); });
   })();
 
-  /* -------------------------
-     Tiles and startup animation
-     ------------------------- */
+  /* Tiles and startup */
   (function () {
     var sites = [
       {name: "Rivestream", url: "https://rivestream.org"},
@@ -322,31 +361,32 @@
 
     function createTiles() {
       var hub = document.getElementById('hub');
-      sites.forEach(function (site, i) {
-        var favicon = site.url.replace(/\/+$/, '') + "/favicon.ico";
+      for (var i = 0; i < sites.length; i++) {
+        (function (site, i) {
+          var favicon = site.url.replace(/\/+$/, '') + "/favicon.ico";
+          var a = document.createElement('a');
+          a.className = "tile";
+          a.href = site.url;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
 
-        var a = document.createElement('a');
-        a.className = "tile";
-        a.href = site.url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
+          var img = document.createElement('img');
+          img.src = favicon;
+          img.alt = site.name;
+          img.onerror = function () {
+            img.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4fa.svg";
+          };
 
-        var img = document.createElement('img');
-        img.src = favicon;
-        img.alt = site.name;
-        img.onerror = function () {
-          img.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4fa.svg";
-        };
+          var span = document.createElement('span');
+          span.textContent = site.name;
 
-        var span = document.createElement('span');
-        span.textContent = site.name;
+          a.appendChild(img);
+          a.appendChild(span);
+          hub.appendChild(a);
 
-        a.appendChild(img);
-        a.appendChild(span);
-        hub.appendChild(a);
-
-        setTimeout(function () { a.classList.add('show'); }, 300 + i * 120);
-      });
+          setTimeout(function () { a.classList.add('show'); }, 300 + i * 120);
+        })(sites[i], i);
+      }
     }
 
     window.onload = function () {
@@ -356,10 +396,8 @@
       document.getElementById('hub').style.opacity = "1";
 
       createTiles();
-      // try to set a themed background once on load
-      if (typeof window.setRandomBackground === "function") {
-        window.setRandomBackground();
-      }
+      // initial preload of theme images (non-blocking)
+      refreshTheme(10);
     };
   })();
   </script>
