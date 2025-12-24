@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Streaming Hub</title>
+  <style>
+    body {
+      margin: 0;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+      overflow-x: hidden;
+    }
+
+    .stars {
+      width: 100%;
+      height: 100%;
+      background: transparent url("https://www.transparenttextures.com/patterns/stardust.png") repeat;
+      position: fixed;
+      top: 0;
+      left: 0;
+      animation: moveStars 200s linear infinite;
+      z-index: -1;
+    }
+    @keyframes moveStars {
+      from {background-position: 0 0;}
+      to {background-position: 10000px 5000px;}
+    }
+
+    #clock {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      font-size: 3em;
+      font-family: monospace;
+      color: #00ffcc;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 8px;
+    }
+
+    .hub {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 120px;
+    }
+    .tile {
+      width: 200px;
+      height: 160px;
+      margin: 20px;
+      background-color: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s, background-color 0.2s;
+      text-decoration: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .tile:hover {
+      transform: scale(1.05);
+      background-color: rgba(0,255,204,0.2);
+    }
+    .tile img {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 10px;
+    }
+    .tile span {
+      font-size: 1.2em;
+      color: #00ffcc;
+    }
+
+    .weather {
+      text-align: center;
+      margin-top: 50px;
+      padding: 20px;
+      background-color: rgba(0,0,0,0.6);
+      border-top: 2px solid #00ffcc;
+    }
+    .weather h2 {
+      color: #00ffcc;
+      margin-bottom: 20px;
+    }
+    .forecast {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+    }
+    .day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #fff;
+      font-size: 1.1em;
+    }
+    .day img {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="stars"></div>
+  <div id="clock"></div>
+  <h1 style="text-align:center;">Benvenuto nel tuo Streaming Hub</h1>
+  <div class="hub" id="hub"></div>
+
+  <!-- Meteo -->
+  <div class="weather">
+    <h2>Previsioni Meteo – Cesate (MI)</h2>
+    <div class="forecast" id="forecast"></div>
+  </div>
+
+  <script>
+    // Lista siti
+    const sites = [
+      {name: "Rivestream", url: "https://rivestream.org"},
+      {name: "StreamingUnity", url: "https://streamingunity.so"},
+      {name: "AnimeUnity", url: "https://animeunity.so"},
+      {name: "YouTube", url: "https://youtube.com"},
+      {name: "IMDn", url: "https://www.imdb.com/"},  
+      {name: "StreamIndex", url: "https://streamindex.org"}
+    ];
+
+    function createTiles() {
+      const hub = document.getElementById('hub');
+      sites.forEach(site => {
+        const favicon = site.url.replace(/\/+$/, '') + "/favicon.ico";
+        const a = document.createElement('a');
+        a.className = "tile";
+        a.href = site.url;
+        a.target = "_blank";
+
+        const img = document.createElement('img');
+        img.src = favicon;
+        img.alt = site.name;
+        img.onerror = () => {
+          img.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4fa.svg";
+        };
+
+        const span = document.createElement('span');
+        span.textContent = site.name;
+
+        a.appendChild(img);
+        a.appendChild(span);
+        hub.appendChild(a);
+      });
+    }
+
+    // Orologio digitale
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Meteo automatico con OpenWeatherMap
+    async function loadWeather() {
+      const apiKey = "4486c1f3d5d5f008857834e3444aeac7"; // <-- sostituisci con la tua API key
+      const url = `https://api.openweathermap.org/data/2.5/forecast?q=Cesate,it&units=metric&appid=${apiKey}&lang=it`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      const forecastDiv = document.getElementById('forecast');
+      forecastDiv.innerHTML = "";
+
+      // Prendi 3 giorni (una previsione ogni 24h ~ ogni 8 step da 3h)
+      for (let i = 0; i < 3; i++) {
+        const item = data.list[i*8]; // ogni 8 step = ~24h
+        const date = new Date(item.dt * 1000);
+        const options = { day: '2-digit', month: 'short' };
+        const dayStr = date.toLocaleDateString('it-IT', options);
+
+        const icon = `https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png`;
+        const desc = item.weather[0].description;
+        const tempMax = Math.round(item.main.temp_max);
+        const tempMin = Math.round(item.main.temp_min);
+
+        const div = document.createElement('div');
+        div.className = "day";
+        div.innerHTML = `
+          <img src="${icon}" alt="${desc}">
+          <span>${dayStr}: ${desc}<br>Max ${tempMax}°C / Min ${tempMin}°C</span>
+        `;
+        forecastDiv.appendChild(div);
+      }
+    }
+
+    createTiles();
+    loadWeather();
+  </script>
+
+</body>
+</html>
